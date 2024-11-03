@@ -1,60 +1,71 @@
 import Objeto_Laberinto as lb
 import Hormiga as h
 import random
-import tkinter as tk
 
-"""root = tk.Tk()
-# Suponiendo que Laberinto también necesita ser inicializado
-laberinto = lb.Laberinto(root)  # Inicializa el laberinto de acuerdo a tu implementación""" #aquí lo estás llamando dos veces
-#una en if main y otra aquí, esta no funciona porque el mainloop es una función aparte
-
-start = []  # define la variable global del incio
-exit = [] #define la variab le global de la salida
+if __name__ == "__main__":
+    root = lb.tk.Tk()
+    laberinto = lb.Laberinto(root)
+    root.mainloop()
 
 
-# ADN de ejemplo
-adn_i_1 = [random.choice(h.alelos_keys)]
-adn_i_2 = [random.choice(h.alelos_keys)]
+###
 
-
-# Función para encontrar la posición de un elemento en la matriz del laberinto
 def encontrar_pos(matriz, elemento):
+
     for fila in range(len(matriz)):
         for columna in range(len(matriz[fila])):
             if matriz[fila][columna] == elemento:
-                return [columna, fila]  # posición del elemento en formato [x, y]
+                return [columna, fila] #posición del elemento en la fila, es basicamente para el inicio  [x,y]
+            
+### Condiciones de inicio
+            
+start = encontrar_pos(laberinto, "s")
+exit = encontrar_pos(laberinto, "e")
+
+adn_i_1 = [random.choice(h.alelos_keys)]
+adn_i_2 = [random.choice(h.alelos_keys)]
+
+Poblacion = [h.Hormiga(start, 100, 0, 0, adn_i_1, laberinto), h.Hormiga(start, 100, 0, 0, adn_i_2, laberinto)]
+
+#Cruce de los adn 
+
+def cruce(adn1, adn2):
+
+    print(f"Inicio de cruce: {start}")
+    if not adn1 or not adn2:
+        return []
+    adn_hijo = []
+    
+    for i in range(max(len(adn1), len(adn2))):
+        mutacion = random.randint(0,3)
+        if mutacion == 1: #si es 1 toma el alelo de padre 1
+            if i < len(adn1):
+                adn_hijo.append(adn1[i])
+
+                if random.choice([True, False]): #si es true también toma el alelo de padre 2
+                    if i < len(adn2):
+                        adn_hijo.append(adn2[i])
+
+        elif mutacion==2: #si es dos toma el alelo de padre 2
+            if i < len(adn2):
+                adn_hijo.append(adn2[i])
+
+                if random.choice([True, False]): #si es True también toma el alelo de padre 1
+                    if i < len(adn1):
+                        adn_hijo.append(adn1[i])
+        
+        #si es 3, nada pasa, o sea no toma ningún alelo
 
 
-# Algoritmo genético para evolucionar la población
-def algoritmo_genetico(Poblacion):
-    for hormiga in Poblacion:
-        adn = hormiga.get_info()[4]
-        for alelo in adn:
-            if alelo != "comer":
-                pre_fitness = hormiga.fitness()
-                hormiga.mover(alelo)
-                post_fitness = hormiga.fitness()
-                fitness_impact = 20 if post_fitness <= pre_fitness else -30
-                hormiga.add_pts(fitness_impact)
-            else:
-                hormiga.comer()
-                if hormiga.get_info()[1] <= 0:
-                    print("La hormiga ha muerto :(")
-                    Poblacion.remove(hormiga)
-                    break
-
-        if hormiga.get_info()[1] > 0:
-            fitness = hormiga.fitness()
-            points = 100 if fitness == 0 else -5 * fitness
-            hormiga.add_pts(points)
-            print("Hormiga resultados:", hormiga.get_info())
-
-    # Guardar resultados de la población actual en el archivo de puntajes
-    guardar_puntajes(Poblacion)
+    
     
 
-#Función para encontrar los datos de un txt
-#Para este algoritmo en específico, si es ADN, entonces lo convierte en matriz
+    print(type(adn_hijo))
+    hormiga_hija = h.Hormiga(start, 100, 0, 0, adn_hijo, laberinto) 
+    return hormiga_hija #Retorna a la hormiga hija
+
+### Encuentra los datos de una linea en un TXT (si la linea es "ADN:" retorna una lista con los alelos)
+
 def encuentre_datos(linea, etiqueta):
     
     inicio = linea.find(etiqueta)
@@ -62,7 +73,7 @@ def encuentre_datos(linea, etiqueta):
 
     final = linea.find("_", inicio)
 
-    if etiqueta == "ADN:": 
+    if etiqueta == "ADN:": #Esto porque ADN siempre es una lista y para efectos de este código ponerlo aparte es muy útil
         dato = linea[inicio:final].strip()  # Eliminar espacios en blanco
 
         if dato.startswith("[") and dato.endswith("]"): # Si el dato está en formato de lista, convertirlo en una lista
@@ -73,10 +84,75 @@ def encuentre_datos(linea, etiqueta):
             return [dato]  # Retornar como lista de un solo elemento
     
 
-    return linea[inicio:final]  #si no es ADN, retorna string, pues lo que se escribe es str           
+    return linea[inicio:final]  #si no es ADN, retorna string, pues lo que se escribe es str            
 
-# Función para guardar los puntajes en un archivo de texto
-def guardar_puntajes(Poblacion):
+
+#Algoritmo genético 
+
+
+def algoritmo_genetico(): #corre el algoritmo genetico
+
+    global Poblacion    
+        
+    for hormiga in Poblacion: #Para cada hormiga en la población
+        
+        adn = hormiga.get_info()[4] 
+        
+
+        for alelo in adn: #Para cada alelo que esté en el adn de las hormigas de la población
+
+            
+            if alelo != "comer":
+                
+                pre_fitness = hormiga.fitness()
+
+                hormiga.mover(alelo) #cambia los atributos del objeto
+
+                #### Aquí creo que ponemos la unión
+
+                post_fitness = hormiga.fitness()
+
+                if post_fitness <= pre_fitness:
+                    print("La hormiga hizo un movimiento óptimo (+20 pts)")
+                    hormiga.add_pts(20)
+                else:
+                    print("La hormiga hizo un movimiento NO óptimo (-30 pts)")
+                    hormiga.add_pts(-30)
+            else:
+
+                hormiga.comer()
+
+                ###Aquí ponemos la otra unión
+
+                salud = hormiga.get_info()[1]
+
+                if salud <= 0:
+                    print("La hormiga ha muerto :(")
+                    break
+
+       
+                    
+        salud = hormiga.get_info()[1] 
+
+        if salud > 0: #Evalua si la hormiga está muerta
+            fitness = hormiga.fitness()
+
+            
+
+            if fitness == 0:
+                hormiga.add_pts(100)
+                print("la hormiga ha llegado a la meta")
+                
+            else:
+                hormiga.add_pts(-5*fitness)
+                print(f"la hormiga quedó a una distancia relativa de {fitness} ({-5*fitness}pts)")
+                
+            print("Hormiga resultados:", hormiga.get_info())
+
+        else:
+
+            Poblacion.remove(hormiga) #si está muerta la quita de la población
+
     if Poblacion: #evalua si hay hormiga en la población
         for hormiga in Poblacion: #para meterlas despues de modificarlas (evalua su puntaje)
 
@@ -152,51 +228,10 @@ def guardar_puntajes(Poblacion):
                         print("la hormiga no entra en el top 3")
 
         with open("puntajes-hormiga.txt", "w") as text: 
-            text.writelines(lines) 
+            text.writelines(lines)  
 
-def validar_y_comenzar(laberinto):
-    global Poblacion, start, exit
-    matriz_laberinto = laberinto.obtener_matriz()
-    start = encontrar_pos(matriz_laberinto, "H")
-    exit = encontrar_pos(matriz_laberinto, "F")
 
-    if start is None or exit is None:
-        # If start or exit is undefined, check again after a short delay
-        root.after(100, lambda: validar_y_comenzar(laberinto))
-    else:
-        # Both start and end positions are defined, so we can initialize the population
-        print("Posiciones de inicio y fin definidas. Comenzando el algoritmo...")
-        
-        # Create initial DNA for ants
-        adn_i_1 = [random.choice(h.alelos_keys)]
-        adn_i_2 = [random.choice(h.alelos_keys)]
-
-        # Initialize the population with ants
-        Poblacion = [
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_1, laberinto),
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_2, laberinto)
-        ]
-
-        # Start the genetic algorithm after 1 second
-        root.after(1000, lambda: algoritmo_genetico(Poblacion))
-        root.after(1000, lambda: se_cruzan())
-
-# Función para el cruce de ADN entre dos hormigas
-def cruce(adn1, adn2):
-    global start, exit
-    adn_hijo = []
-    for i in range(max(len(adn1), len(adn2))):
-        mutacion = random.randint(0, 3)
-        if mutacion == 1 and i < len(adn1):
-            adn_hijo.append(adn1[i])
-            if random.choice([True, False]) and i < len(adn2):
-                adn_hijo.append(adn2[i])
-        elif mutacion == 2 and i < len(adn2):
-            adn_hijo.append(adn2[i])
-            if random.choice([True, False]) and i < len(adn1):
-                adn_hijo.append(adn1[i])
-
-    return h.Hormiga(start, exit, 100, 0, 0, adn_hijo, laberinto)
+### Cruza a las dos mejores (encuentra los datos en el txt y llama a cruze)
 
 def se_cruzan (): 
 
@@ -210,11 +245,11 @@ def se_cruzan ():
 
     if not lines: #Si las líneas son nulas, no hay hormigas
         print("no hay hormigas, vamos a meter dos más")
-        Poblacion = [h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto), h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto)]
+        Poblacion = [h.Hormiga(start, 100, 0, 0, [random.choice(h.alelos_keys)]), h.Hormiga(start, 100, 0, 0, [random.choice(h.alelos_keys)])]
 
     elif len(lines) == 1: # Si las líenas son una, significa solo hay una hormiga
         print("solo queda una hormiga, vamos a meter una más")
-        Poblacion = [h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto)] #modifica la población para que
+        Poblacion = [h.Hormiga(start, 100, 0, 0, [random.choice(h.alelos_keys)])] #modifica la población para que
                                                                                 # El while corra a las nuevas hormigas
                                                                                 # y las viejas se quedan en el txt
     
@@ -232,19 +267,41 @@ def se_cruzan ():
 
         Poblacion = [hormiga_hija] #esta lista se modifica para que tenga sentido en el código, pues evalua las hormigas in Poblacion
 
-# Condiciones de inicio y configuración del laberinto y la población de hormigas
-if __name__ == "__main__":
-    # Crear la ventana principal y el laberinto
-    print("Iniciando la ventana de tk inter")
-    try:
-        root = tk.Tk()
-        laberinto = lb.Laberinto(root)
-        validar_y_comenzar(laberinto)
-        root.mainloop()
-    except Exception as e:
-        print(f"Error al iniciar el laberinto de tkinter: {e}") 
+def intento():
+
+    global Poblacion
+
+    with open("puntajes-hormiga.txt", "w") as text: #borra todo para comenzar
+        pass
+
+    gen = 1
+
+    while True:
 
 
+        gen+=1
+        if Poblacion: #Esto es solo para evitar errores de que la lista de población esté vacía
+
+            algoritmo_genetico()
+            se_cruzan() #si hay población, se cruzan
+
+        else:
+
+            print("no hay hormigas, vamos a meter dos más")
+            Poblacion = [h.Hormiga(start, 100, 0, 0, [random.choice(h.alelos_keys)]), h.Hormiga(start, 100, 0, 0, [random.choice(h.alelos_keys)])]
+            #Si no, agrega dos hormigas
+
+        with open("puntajes-hormiga.txt", "r") as text:
+            lines = text.readlines()
+            if lines:
+                if int(encuentre_datos(lines[0], "PUNTOS:")) >= 180:
+                    break
+        #option = input("<s> para salir, <any oter key> para la siguiente simulación")
+        #esto for debbug, pero ya después lo quitamos
+        #if option == "s":
+            #break
+
+    print(f"Numero de generaciones: {gen}")
 
 
     
