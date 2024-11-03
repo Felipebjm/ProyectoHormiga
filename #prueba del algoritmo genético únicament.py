@@ -1,3 +1,5 @@
+#prueba del algoritmo genético únicamente:
+
 import Objeto_Laberinto as lb
 import Hormiga as h
 import random
@@ -16,6 +18,7 @@ exit = [] #define la variab le global de la salida
 adn_i_1 = [random.choice(h.alelos_keys)]
 adn_i_2 = [random.choice(h.alelos_keys)]
 
+Poblacion = []
 
 # Función para encontrar la posición de un elemento en la matriz del laberinto
 def encontrar_pos(matriz, elemento):
@@ -33,9 +36,8 @@ def algoritmo_genetico(Poblacion, laberinto):
             if alelo != "comer":
                 pre_fitness = hormiga.fitness()
                 hormiga.mover(alelo)
-                laberinto.actualizar_poscicion_hormiga(hormiga.get_info()[1],hormiga.get_info()[0], texto="H")
                 post_fitness = hormiga.fitness()
-                fitness_impact = 20 if post_fitness <= pre_fitness else -30
+                fitness_impact = 20 if post_fitness < pre_fitness else -30
                 hormiga.add_pts(fitness_impact)
             else:
                 hormiga.comer()
@@ -158,13 +160,13 @@ def guardar_puntajes(Poblacion):
 def validar_y_comenzar(laberinto):
     global Poblacion, start, exit
     
-    matriz_laberinto = laberinto.obtener_matriz()
+    matriz_laberinto = laberinto
     start = encontrar_pos(matriz_laberinto, "H")
     exit = encontrar_pos(matriz_laberinto, "F")
 
     if start is None or exit is None:
         # If start or exit is undefined, check again after a short delay
-        root.after(100, lambda: validar_y_comenzar(laberinto))
+        validar_y_comenzar(laberinto)
     else:
         # Both start and end positions are defined, so we can initialize the population
         print("Posiciones de inicio y fin definidas. Comenzando el algoritmo...")
@@ -174,14 +176,15 @@ def validar_y_comenzar(laberinto):
         adn_i_2 = [random.choice(h.alelos_keys)]
 
         # Initialize the population with ants
-        Poblacion = [
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_1, laberinto),
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_2, laberinto)
-        ]
+        if not Poblacion: 
+            Poblacion = [
+                h.Hormiga(start, exit, 100, 0, 0, adn_i_1, laberinto),
+                h.Hormiga(start, exit, 100, 0, 0, adn_i_2, laberinto)
+            ]
 
         # Start the genetic algorithm after 1 second
-        root.after(1000, lambda: algoritmo_genetico(Poblacion, laberinto))
-        root.after(1000, lambda: se_cruzan())
+        algoritmo_genetico(Poblacion, laberinto)
+        se_cruzan()
 
 # Función para el cruce de ADN entre dos hormigas
 def cruce(adn1, adn2):
@@ -235,18 +238,22 @@ def se_cruzan ():
         Poblacion = [hormiga_hija] #esta lista se modifica para que tenga sentido en el código, pues evalua las hormigas in Poblacion
 
 # Condiciones de inicio y configuración del laberinto y la población de hormigas
-if __name__ == "__main__":
-    # Crear la ventana principal y el laberinto
-    print("Iniciando la ventana de tk inter")
-    try:
-        root = tk.Tk()
-        laberinto = lb.Laberinto(root)
+laberinto = [["H","",""],["","",""],["","","F"]]
+def comienza():
+    global laberinto
+    with open("puntajes-hormiga.txt", "w") as text: #borra todo para comenzar
+        pass
+    
+    while True:
+        laberinto = [["H","",""],["","",""],["","","F"]]
         validar_y_comenzar(laberinto)
-        root.mainloop()
-    except Exception as e:
-        print(f"Error al iniciar el laberinto de tkinter: {e}") 
+        option= input("input: ")
+        if option == "s":
+            break
+        
+    
 
-
+comienza()
 
 
     
