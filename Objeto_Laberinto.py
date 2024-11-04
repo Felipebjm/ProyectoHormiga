@@ -8,7 +8,7 @@ class Laberinto:
         self.matriz = []
         self.inicio = None
         self.fin = None
-        
+        self.estado_inicial = None
         # Diccionario de letras para representar ítems y sus colores
         self.items_letras = {
             "azúcar": ("A", "lightblue"),
@@ -23,6 +23,46 @@ class Laberinto:
 
         self.hormiga_pos = None  # Inicia sin posición definida
         self.seleccionar_tamano_matriz()
+        self.start_button = ttk.Button(self.root, text="Iniciar Algoritmo", command=self.iniciar_algoritmo)
+        self.start_button.pack(pady=10)
+
+    def iniciar_algoritmo(self):
+        # Aquí llamas a la función que inicia el algoritmo genético
+        from algoritmo_genetico import iniciar_algoritmo_genetico
+        matriz = self.obtener_matriz_actual()
+        self.estado_inicial = [fila.copy() for fila in matriz]
+        iniciar_algoritmo_genetico(matriz, self)
+    
+    def restaurar_laberinto(self):
+        if self.estado_inicial is not None:
+            for i in range(len(self.matriz)):
+                for j in range(len(self.matriz[0])):
+                    item = self.estado_inicial[i][j]
+                    if item == "H":
+                        # Restaurar la posición de la hormiga inicial
+                        self.hormiga_pos = (i, j)
+                        self.matriz[i][j].config(text="H", bg="saddle brown")
+                    if item == "F":
+                        # Obtener la letra y color del ítem F (si no se pone blanco)
+                        item_letter, item_color = self.items_letras.get(item, (item, "yellow"))
+                        self.matriz[i][j].config(text=item_letter, bg=item_color)
+                    elif item:
+                        # Obtener la letra y color del ítem
+                        item_letter, item_color = self.items_letras.get(item, (item, "white"))
+                        self.matriz[i][j].config(text=item_letter, bg=item_color)
+                    else:
+                        # Limpiar la celda
+                        self.matriz[i][j].config(text="", bg="white")
+            # Si había hormiga(s) anterior(es), eliminarlas de la matriz lógica
+            self.eliminar_hormigas_previas()
+
+    def eliminar_hormigas_previas(self):
+        for i in range(len(self.matriz)):
+            for j in range(len(self.matriz[0])):
+                if self.matriz[i][j].cget("text") == "H" and (i, j) != self.hormiga_pos:
+                    # Limpiar la celda que contiene una hormiga anterior
+                    self.matriz[i][j].config(text="", bg="white")
+
     def crear_matriz(self):
         matriz = []
         return matriz
@@ -33,6 +73,15 @@ class Laberinto:
     def obtener_matriz(self): #devuelve la matriz completa
         return self.matriz
     
+    def obtener_matriz_actual(self):
+        matriz = []
+        for fila in self.matriz:
+            fila_matriz = []
+            for celda in fila:
+                fila_matriz.append(celda.cget("text"))
+            matriz.append(fila_matriz)
+        return matriz
+
     def validar_letra(self, letra): #retorna true si la letra está en la matriz
         matriz = self.matriz
         for fila in range(len(matriz)):
@@ -41,13 +90,18 @@ class Laberinto:
                     return True
         return False
     
-    def actualizar_poscicion_hormiga(self,fila,col, texto="H"):
-        # Limpia la posición anterior de la hormiga y actualiza su nueva posición
-        if self.inicio:
-            old_row, old_col = self.inicio
-            self.matriz[old_row][old_col].config(text="", bg="white")
-        self.matriz[fila][col].config(text=texto, bg="yellow")
-        self.inicio = (fila, col)  # Actualiza la posición de la hormiga en el laberinto
+
+    def actualizar_posicion_hormiga(self, vieja_pos, nueva_pos):
+        # Limpiar la posición anterior de la hormiga
+        if vieja_pos is not None:
+            old_row, old_col = vieja_pos[1], vieja_pos[0]
+            if self.matriz[old_row][old_col] is not None:
+                self.matriz[old_row][old_col].config(text="", bg="white")
+            
+        # Actualizar la nueva posición de la hormiga
+        new_row, new_col = nueva_pos[1], nueva_pos[0]
+        if self.matriz[new_row][new_col] is not None:
+            self.matriz[new_row][new_col].config(text="H", bg="saddle brown")
 
     def seleccionar_tamano_matriz(self):
         # Selector de tamaño de matriz
@@ -118,6 +172,8 @@ class Laberinto:
             item_letter, item_color = self.items_letras[selected_item]
             self.matriz[row][col].config(text=item_letter, bg=item_color)
             print(f"Objeto '{selected_item}' agregado en posición ({row}, {col})")
+            if self.estado_inicial:
+                self.estado_inicial[row][col] = item_letter
 
     def set_hormiga_position(self, row, col):
         # Establecer la posición inicial de la hormiga sin notificación

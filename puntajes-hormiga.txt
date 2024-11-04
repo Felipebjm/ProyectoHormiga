@@ -1,3 +1,3 @@
-HORMIGA:1_SALUD:100_ALCOHOL:0_PUNTOS:180_ADN:['abajo', 'derecha', 'abajo', 'derecha']_
-HORMIGA:2_SALUD:100_ALCOHOL:0_PUNTOS:180_ADN:['abajo', 'abajo', 'derecha', 'derecha']_
-HORMIGA:3_SALUD:100_ALCOHOL:0_PUNTOS:180_ADN:['derecha', 'abajo', 'derecha', 'abajo']_
+HORMIGA:1_SALUD:100_ALCOHOL:0_PUNTOS:55_ADN:['derecha', 'abajo', 'abajo']_
+HORMIGA:2_SALUD:100_ALCOHOL:0_PUNTOS:55_ADN:['abajo', 'derecha', 'abajo']_
+HORMIGA:3_SALUD:100_ALCOHOL:0_PUNTOS:30_ADN:['derecha', 'derecha']_

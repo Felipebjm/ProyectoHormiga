@@ -1,11 +1,11 @@
+#prueba del algoritmo genético únicamente:
+
 import Objeto_Laberinto as lb
 import Hormiga as h
 import random
 import tkinter as tk
+import time
 
-"""root = tk.Tk()
-# Suponiendo que Laberinto también necesita ser inicializado
-laberinto = lb.Laberinto(root)  # Inicializa el laberinto de acuerdo a tu implementación""" #aquí lo estás llamando dos veces
 #una en if main y otra aquí, esta no funciona porque el mainloop es una función aparte
 
 start = []  # define la variable global del incio
@@ -16,6 +16,7 @@ exit = [] #define la variab le global de la salida
 adn_i_1 = [random.choice(h.alelos_keys)]
 adn_i_2 = [random.choice(h.alelos_keys)]
 
+Poblacion = []
 
 # Función para encontrar la posición de un elemento en la matriz del laberinto
 def encontrar_pos(matriz, elemento):
@@ -32,11 +33,13 @@ def algoritmo_genetico(Poblacion, laberinto):
         for alelo in adn:
             if alelo != "comer":
                 pre_fitness = hormiga.fitness()
-                hormiga.mover(alelo)
-                laberinto.actualizar_poscicion_hormiga(hormiga.get_info()[1],hormiga.get_info()[0], texto="H")
+                move = hormiga.mover(alelo)
                 post_fitness = hormiga.fitness()
-                fitness_impact = 20 if post_fitness <= pre_fitness else -30
+                fitness_impact = 20 if post_fitness < pre_fitness else -30
                 hormiga.add_pts(fitness_impact)
+                if move == True:
+                    return True
+
             else:
                 hormiga.comer()
                 if hormiga.get_info()[1] <= 0:
@@ -53,7 +56,6 @@ def algoritmo_genetico(Poblacion, laberinto):
     # Guardar resultados de la población actual en el archivo de puntajes
     guardar_puntajes(Poblacion)
     
-
 #Función para encontrar los datos de un txt
 #Para este algoritmo en específico, si es ADN, entonces lo convierte en matriz
 def encuentre_datos(linea, etiqueta):
@@ -155,37 +157,50 @@ def guardar_puntajes(Poblacion):
         with open("puntajes-hormiga.txt", "w") as text: 
             text.writelines(lines) 
 
-def validar_y_comenzar(laberinto):
-    global Poblacion, start, exit
+
+def validar_y_comenzar(laberinto_obj):
+    global Poblacion, start, exit, laberinto
     
-    matriz_laberinto = laberinto.obtener_matriz()
+    matriz_laberinto = laberinto
     start = encontrar_pos(matriz_laberinto, "H")
     exit = encontrar_pos(matriz_laberinto, "F")
 
     if start is None or exit is None:
-        # If start or exit is undefined, check again after a short delay
-        root.after(100, lambda: validar_y_comenzar(laberinto))
+        print("Defina las posiciones de inicio y fin en el laberinto.")
+        return
     else:
-        # Both start and end positions are defined, so we can initialize the population
         print("Posiciones de inicio y fin definidas. Comenzando el algoritmo...")
-        
-        # Create initial DNA for ants
+
         adn_i_1 = [random.choice(h.alelos_keys)]
         adn_i_2 = [random.choice(h.alelos_keys)]
 
-        # Initialize the population with ants
-        Poblacion = [
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_1, laberinto),
-            h.Hormiga(start, exit, 100, 0, 0, adn_i_2, laberinto)
-        ]
+        if not Poblacion:
+            Poblacion.extend([
+                h.Hormiga(start, exit, 100, 0, 0, adn_i_1, laberinto_obj),
+                h.Hormiga(start, exit, 100, 0, 0, adn_i_2, laberinto_obj)
+            ])
 
-        # Start the genetic algorithm after 1 second
-        root.after(1000, lambda: algoritmo_genetico(Poblacion, laberinto))
-        root.after(1000, lambda: se_cruzan())
+        ejecutar_algoritmo_genetico(laberinto_obj)
+
+def ejecutar_algoritmo_genetico(laberinto_obj):
+    global Poblacion, gen
+    
+    
+    laberinto_obj.restaurar_laberinto()
+    a = algoritmo_genetico(Poblacion, laberinto_obj)
+    if a == True:
+        print("LLEGÓ AL FINAL YEI")
+        return
+    se_cruzan(laberinto_obj)
+    gen += 1
+
+    # Programar la siguiente generación después de un breve retraso
+    laberinto_obj.root.after(300, lambda: ejecutar_algoritmo_genetico(laberinto_obj))
+    
 
 # Función para el cruce de ADN entre dos hormigas
-def cruce(adn1, adn2):
-    global start, exit
+
+def cruce(adn1, adn2, laberinto_obj):
     adn_hijo = []
     for i in range(max(len(adn1), len(adn2))):
         mutacion = random.randint(0, 3)
@@ -198,56 +213,60 @@ def cruce(adn1, adn2):
             if random.choice([True, False]) and i < len(adn1):
                 adn_hijo.append(adn1[i])
 
-    return h.Hormiga(start, exit, 100, 0, 0, adn_hijo, laberinto)
+    return h.Hormiga(start, exit, 100, 0, 0, adn_hijo, laberinto_obj)
 
-def se_cruzan (): 
-
+def se_cruzan(laberinto_obj):
     global Poblacion
 
     with open("puntajes-hormiga.txt", "r") as text:
         lines = text.readlines()
-        #Selección
 
-    ### Aquí evalua si se pueden cruzar
-
-    if not lines: #Si las líneas son nulas, no hay hormigas
-        print("no hay hormigas, vamos a meter dos más")
-        Poblacion = [h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto), h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto)]
-
-    elif len(lines) == 1: # Si las líenas son una, significa solo hay una hormiga
-        print("solo queda una hormiga, vamos a meter una más")
-        Poblacion = [h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto)] #modifica la población para que
-                                                                                # El while corra a las nuevas hormigas
-                                                                                # y las viejas se quedan en el txt
-    
+    if not lines:
+        print("No hay hormigas, vamos a agregar dos más")
+        Poblacion = [
+            h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto_obj),
+            h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto_obj)
+        ]
+    elif len(lines) == 1:
+        print("Solo queda una hormiga, vamos a agregar una más")
+        Poblacion = [
+            h.Hormiga(start, exit, 100, 0, 0, [random.choice(h.alelos_keys)], laberinto_obj)
+        ]
     else:
-        
         adnh1 = encuentre_datos(lines[0], "ADN:")
         adnh2 = encuentre_datos(lines[1], "ADN:")
 
-        #cruzamiento            
-        hormiga_hija = cruce(adnh1, adnh2)
-
+        hormiga_hija = cruce(adnh1, adnh2, laberinto_obj)
         hormiga_hija.muta()
-
         print("Hormiga Hija:", hormiga_hija.get_info())
 
-        Poblacion = [hormiga_hija] #esta lista se modifica para que tenga sentido en el código, pues evalua las hormigas in Poblacion
+        Poblacion = [hormiga_hija]
 
-# Condiciones de inicio y configuración del laberinto y la población de hormigas
+def iniciar_algoritmo_genetico(matriz_laberinto, laberinto_obj):
+    global Poblacion, start, exit, laberinto, gen
+    laberinto = matriz_laberinto
+    gen = 1
+    Poblacion = []
+
+    with open("puntajes-hormiga.txt", "w") as text:
+        pass
+    laberinto_obj.restaurar_laberinto()
+    validar_y_comenzar(laberinto_obj)
+    
+
+
 if __name__ == "__main__":
-    # Crear la ventana principal y el laberinto
-    print("Iniciando la ventana de tk inter")
-    try:
-        root = tk.Tk()
-        laberinto = lb.Laberinto(root)
-        validar_y_comenzar(laberinto)
-        root.mainloop()
-    except Exception as e:
-        print(f"Error al iniciar el laberinto de tkinter: {e}") 
+    import tkinter as tk
+    from Objeto_Laberinto import Laberinto
 
+    # Crear la ventana principal de Tkinter
+    root = tk.Tk()
 
+    # Crear una instancia del laberinto
+    laberinto_obj = Laberinto(root)
 
+    # Iniciar el loop de Tkinter
+    root.mainloop()
 
     
 

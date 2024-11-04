@@ -19,7 +19,7 @@ azucar = Azucar(30)
 vino = Vino(10)
 
 class Hormiga:
-    def __init__(self, posicion, posicion_final, salud, alcohol_lvl, puntos, adn, laberinto):
+    def __init__(self, posicion, posicion_final, salud, alcohol_lvl, puntos, adn, laberinto_obj):
         if posicion is None:
             raise ValueError("La posición no puede ser None")  # Lanza un error si la posición es None
         self.posicion = posicion # Inicializa la posición de la hormiga
@@ -27,7 +27,10 @@ class Hormiga:
         self.salud = salud 
         self.alcohol_lvl = alcohol_lvl
         self.puntos = puntos 
-        self.laberinto = laberinto  # Matriz del laberinto
+
+        self.laberinto_obj = laberinto_obj  # Referencia al objeto Laberinto
+        self.laberinto = [fila.copy() for fila in laberinto_obj.obtener_matriz()]
+
         self.adn = adn
         # Inicialización de listas para registrar iteraciones
         self.generaciones = []       # Lista para almacenar el número de iteraciones
@@ -47,13 +50,16 @@ class Hormiga:
         nueva_pos = [
             self.posicion[0] + Alelos[alelo][0], 
             self.posicion[1] + Alelos[alelo][1]
-        ]
+        ] if self.posicion else self.laberinto_obj.hormiga_pos
         
         # Verifica límites del laberinto
         if (0 <= nueva_pos[0] < len(self.laberinto[0]) and 0 <= nueva_pos[1] < len(self.laberinto)):
             # Verifica si la nueva posición es una roca
             if self.laberinto[nueva_pos[1]][nueva_pos[0]] != "R":
+                self.laberinto_obj.actualizar_posicion_hormiga(self.posicion, nueva_pos)
                 self.posicion = nueva_pos
+                self.laberinto_obj.root.update_idletasks()
+                time.sleep(0.4)
 
                 # Verifica si ha alcanzado la posición final
                 if self.posicion == self.posicion_final:
